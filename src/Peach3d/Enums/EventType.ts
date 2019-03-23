@@ -1,6 +1,7 @@
 export enum EventType {
   Click = "click",
   Resize = "resize",
+  WindowResize = "window:resize",
   HoverOver = "hoveron",
   HoverOff = "hoveroff",
   DragStart = "dragstart",

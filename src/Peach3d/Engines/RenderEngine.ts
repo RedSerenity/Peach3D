@@ -1,47 +1,39 @@
-import { Injectable } from "@anglar/core";
+import { Injectable, HostListener } from "@angular/core";
 
 import { WebGLRenderer, PCFShadowMap, Camera, Scene } from "three-full";
-import { QuickEvent } from "./";
-
-import { CameraEngine } from './CameraEngine';
-import { SceneEngine } from './SceneEngine';
-import { EventType } from './Enums';
+import { QuickEvent, CameraEngine, SceneEngine } from "./";
+import { EventType } from "../Enums";
 
 @Injectable()
 export class RenderEngine {
-  public OnRender: QuickEvent = new QuickEvent();
-  public OnAnimate: QuickEvent = new QuickEvent();
+  public OnAnimateEvents: QuickEvent = new QuickEvent();
+  public OnRenderEvents:  QuickEvent = new QuickEvent();
 
   public AntiAlias: boolean = true;
   public ShadowMap: boolean = true;
 
   private _Renderer: WebGLRenderer;
-  private _Canvas: HTMLElement;
+  private _Canvas: HTMLCanvasElement;
 
   public get Renderer(): WebGLRenderer {
     return this._Renderer;
   }
 
-  public get Canvas(): HTMLElement {
+  public get Canvas(): HTMLCanvasElement {
     return this._Canvas;
   }
 
   constructor(private cameraEngine: CameraEngine, private sceneEngine: SceneEngine) {
+    this.OnAnimateEvents.Subscribe(cameraEngine.OnAnimate);
+    this.OnRenderEvents.Subscribe(cameraEngine.OnRender);
 
+    this.OnAnimateEvents.Subscribe(sceneEngine.OnAnimate);
+    this.OnRenderEvents.Subscribe(sceneEngine.OnRender);
   }
 
-  public Init(): void {
-    if (!this._Canvas) {
-      throw Error("RenderEngine.SetCanvas() or RenderEngine.Configure() has not been called.");
-    }
-
-    if (!this._Camera) {
-      throw Error("RenderEngine.SetCamera() or RenderEngine.Configure() has not been called.");
-    }
-
-    if (!this._Scene) {
-      throw Error("RenderEngine.SetScene() or RenderEngine.Configure() has not been called.");
-    }
+  public Init(canvas: HTMLCanvasElement): void {
+    this._Canvas = canvas;
+    this.cameraEngine.Canvas = canvas;
 
     this._Renderer = new WebGLRenderer({ antialias: this.AntiAlias, canvas: this._Canvas });
     this._Renderer.setPixelRatio(window.devicePixelRatio);
@@ -58,53 +50,23 @@ export class RenderEngine {
   public Start(): void {
     if (!this._Renderer) throw Error("RenderEngine.Init() has not been called.");
 
-    this._Animate();
+    this.Animate();
   }
 
-  public SetCanvas(canvasId: string): void {
-    this._Canvas = document.getElementById(canvasId);
-    if (!this._Canvas) {
-      throw Error("Failed to get Canvas Element.");
-    }
-  }
-
-  public SetScene(scene: SceneEngine): void {
-    if (!scene) {
-      throw Error("You must provide a valid SceneEngine object.");
-    }
-
-    this._Scene = scene;
-    this.OnAnimate.Subscribe(this._Scene.OnAnimate);
-    this.OnRender.Subscribe(this._Scene.OnRender);
-  }
-
-  public SetCamera(camera: CameraEngine): void {
-    if (!camera) {
-      throw Error("You must provide a valid CameraEngine object.");
-    }
-    if (!this._Canvas) {
-      throw Error("RenderEngine.SetCanvas() must be called be RenderEngine.SetCamera().");
-    }
-
-    camera.Canvas = this._Canvas;
-    this._Camera = camera;
-    this.OnAnimate.Subscribe(this._Camera.OnAnimate);
-    this.OnRender.Subscribe(this._Camera.OnRender);
-  }
-
-  private _OnWindowResize(): void {
+  @HostListener(EventType.WindowResize, ["$event"])
+  private _OnWindowResize(event: Event): void {
     if (!this._Renderer) return;
     this._Renderer.setSize(window.innerWidth, window.innerHeight);
   }
 
-  private _Animate(): void {
-    requestAnimationFrame(this._Animate.bind(this));
+  public Animate(): void {
+    requestAnimationFrame(this.Animate.bind(this));
     this.Render();
-    this.OnAnimate.Trigger(this);
+    this.OnAnimateEvents.Trigger(this);
   }
 
   public Render(): void {
-    this.OnRender.Trigger(this);
-    this._Renderer.render(this._Scene.Scene, this._Camera.Camera);
+    this.OnRenderEvents.Trigger(this);
+    this._Renderer.render(this.sceneEngine.Scene, this.cameraEngine.Camera);
   }
 }

@@ -4,15 +4,15 @@ import { LayerType, EventType } from '../Enums';
 
 export class CameraEngine implements IRenderEvents {
   private _Camera: Camera;
-  private _Canvas: HTMLElement;
+  private _Canvas: HTMLCanvasElement;
 
   private _OrbitControl: OrbitControls;
 
-  public get Canvas(): HTMLElement {
+  public get Canvas(): HTMLCanvasElement {
     return this._Canvas;
   }
 
-  public set Canvas(canvas: HTMLElement) {
+  public set Canvas(canvas: HTMLCanvasElement) {
     if (!canvas) return;
 
     this._Camera.aspect = canvas.clientWidth / canvas.clientHeight;
